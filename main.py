@@ -22,7 +22,7 @@ label = './lsp_dataset/joints.mat'
 batchsize = 8
 num_epochs = 5
 img_size = 256
-lr = 0.0001
+lr = 0.00001
 
 transforms = t.Compose([ToTensorKey(),
                             Resize_Keypt((img_size, img_size))])
