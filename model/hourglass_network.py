@@ -76,7 +76,7 @@ class HourGlassNetwork(torch.nn.Module):
         self.num_hg = num_hg
         self.start = self._make_start(in_channel, input_dim)
         self.hg_net = self._make_hg(num_hg, order, [input_dim for _ in range(num_hg + 1)], num_classes)
-        self.fc = torch.nn.Linear(input_size // (4*4), 3)
+        self.fc = torch.nn.Linear(input_size // (4*4), 2)
     
     def _make_start(self, in_channel, input_dim=256):
         seq = torch.nn.Sequential(torch.nn.Conv2d(in_channel, 64, kernel_size=3, stride=2, padding=1),

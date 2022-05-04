@@ -18,10 +18,10 @@ print("Using device "+str(device)+".")
 image = './lsp_dataset/images'
 label = './lsp_dataset/joints.mat'
 
-batchsize = 2
+batchsize = 8
 num_epochs = 1
 img_size = 256
-lr = 0.0001
+lr = 0.00001
 
 transforms = t.Compose([ToTensorKey(),
                             Resize_Keypt((img_size, img_size))])
@@ -31,7 +31,7 @@ train, val = sampler(dataset)
 train_loader = DataLoader(train, batchsize, shuffle=True)
 val_loader = DataLoader(val, batchsize, shuffle=True)
 model = HourGlassNetwork(4, 14, 3, 256, 4).to(device)
-loss = torch.nn.MSELoss(reduction='sum')
+loss = torch.nn.MSELoss(reduction='mean')
 optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
 
@@ -41,7 +41,7 @@ model.train()
 for j, [images, size, labels] in enumerate(train_loader):
     images, labels = images.to(device), labels.to(device)
     prediction = model(images)
-    loss_value = loss(prediction['result'].float(), labels.float()).float()
+    loss_value = loss(prediction['result'].float(), labels[:, :,  0 : 2].float()).float()
     optimizer.zero_grad()
     loss_value.backward()
     optimizer.step()
