@@ -31,11 +31,13 @@ sampler = DatasetSampler(len(dataset), len(dataset) // 5)
 train, val = sampler(dataset)
 train_loader = DataLoader(train, batchsize, shuffle=True)
 val_loader = DataLoader(val, batchsize, shuffle=True)
-model = HourGlassNetwork(1, 14, 3, 256, 4).to(device)
+model = HourGlassNetwork(4, 14, 3, 256, 4).to(device)
 # model = DeepPose(14)
 model.to(device)
 loss = torch.nn.MSELoss(reduction='mean')
 optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+
+
 
 
 class Trainer:
@@ -45,6 +47,12 @@ class Trainer:
         self.optimizer = optimizer
         self.loss = loss
         self.epoch = epoch
+    
+    def _loss(self, pred, anno):
+        loss = 0
+        for key, value in pred.items():
+            loss += self.loss(value.float(), anno.float())
+        return loss
     def train(self):
         model.train()
         # loss_value = float(0)
@@ -52,8 +60,8 @@ class Trainer:
         for epoch in range(self.epoch):
             for j, [images, size, labels] in enumerate(train_loader):
                 images, labels = images.to(device), labels.to(device)
-                prediction = model(images)['result']
-                loss_value = loss(prediction.float(), labels[:, :,  0 : 2].flatten(1).float()).float()
+                prediction = model(images)
+                loss_value = self._loss(prediction, labels[:, :,  0 : 2].flatten(1).float()).float()
                 optimizer.zero_grad()
                 loss_value.backward()
                 optimizer.step()

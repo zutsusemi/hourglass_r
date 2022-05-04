@@ -76,7 +76,7 @@ class HourGlassNetwork(torch.nn.Module):
         self.num_hg = num_hg
         self.start = self._make_start(in_channel, input_dim)
         self.hg_net = self._make_hg(num_hg, order, [input_dim for _ in range(num_hg + 1)], num_classes)
-        self.fc = torch.nn.Linear(input_size // (4*4), 2 * num_classes)
+        self.fc = torch.nn.ModuleList([torch.nn.Linear(input_size // (4*4), 2 * num_classes) for _ in range(num_hg)])
     
     def _make_start(self, in_channel, input_dim=256):
         seq = torch.nn.Sequential(torch.nn.Conv2d(in_channel, 64, kernel_size=3, stride=2, padding=1),
@@ -93,10 +93,10 @@ class HourGlassNetwork(torch.nn.Module):
         j = 0
         for j in range(num_hg - 1):
             module_list.append(HourGlass(order=order))
-            module_list.append(torch.nn.Conv2d(channels[j], channels[j], 1))
-            module_list.append(torch.nn.Conv2d(channels[j], num_cls, 1))
-            module_list.append(torch.nn.Conv2d(num_cls, channels[j+1], 1))
-            module_list.append(torch.nn.Conv2d(channels[j], channels[j+1], 1))
+            module_list.append(ResidualMod(1, [channels[j] for _ in range(3)], [channels[j] for _ in range(3)], [1, 1, 1]))
+            module_list.append(torch.nn.Conv2d(channels[j], 1, 1, bias=True))
+            module_list.append(torch.nn.Conv2d(1, channels[j+1], 1, bias=True))
+            module_list.append(torch.nn.Conv2d(channels[j], channels[j+1], 1, bias=True))
         
         module_list.append(HourGlass(order=order))
         module_list.append(torch.nn.Conv2d(channels[j+1], 1, 1))
@@ -109,13 +109,14 @@ class HourGlassNetwork(torch.nn.Module):
             out = self.hg_net[j*5](x)
             ll = self.hg_net[j*5+1](out)
             out = self.hg_net[j*5+4](ll)
+
             map = self.hg_net[j*5+2](ll)
             branch = self.hg_net[j*5+3](map)
-            result['heat_map_'+str(j)]=map
+            result['heat_map_'+str(j)]=self.fc[j](map.flatten(1)).sigmoid()
             x = out + branch + x 
         out = self.hg_net[-1](self.hg_net[-2](x))
         out = out.flatten(1)
-        out = self.fc(out).sigmoid()
+        out = self.fc[j](out).sigmoid()
         result['result'] = out
         return result
 
