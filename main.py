@@ -20,7 +20,7 @@ image = './lsp_dataset/images'
 label = './lsp_dataset/joints.mat'
 
 batchsize = 8
-num_epochs = 1
+num_epochs = 5
 img_size = 256
 lr = 0.0001
 
@@ -31,8 +31,8 @@ sampler = DatasetSampler(len(dataset), len(dataset) // 5)
 train, val = sampler(dataset)
 train_loader = DataLoader(train, batchsize, shuffle=True)
 val_loader = DataLoader(val, batchsize, shuffle=True)
-# model = HourGlassNetwork(4, 14, 3, 256, 4).to(device)
-model = DeepPose(14)
+model = HourGlassNetwork(1, 14, 3, 256, 4).to(device)
+# model = DeepPose(14)
 model.to(device)
 loss = torch.nn.MSELoss(reduction='mean')
 optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
@@ -48,16 +48,18 @@ class Trainer:
     def train(self):
         model.train()
         # loss_value = float(0)
+        count = 0
         for epoch in range(self.epoch):
             for j, [images, size, labels] in enumerate(train_loader):
                 images, labels = images.to(device), labels.to(device)
-                prediction = model(images)
+                prediction = model(images)['result']
                 loss_value = loss(prediction.float(), labels[:, :,  0 : 2].flatten(1).float()).float()
                 optimizer.zero_grad()
                 loss_value.backward()
                 optimizer.step()
+                count += 1
                 if j % 10 == 0:
-                    print('[epoch '+str(epoch)+' '+str(j)+'th iter]'+' loss: '+str(loss_value))
+                    print('[epoch '+str(epoch)+' '+str(count)+'th iter]'+' loss: '+str(loss_value))
 
 
 trainer = Trainer(model, train_loader, optimizer, loss, num_epochs, device)

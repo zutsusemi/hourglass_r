@@ -76,7 +76,7 @@ class HourGlassNetwork(torch.nn.Module):
         self.num_hg = num_hg
         self.start = self._make_start(in_channel, input_dim)
         self.hg_net = self._make_hg(num_hg, order, [input_dim for _ in range(num_hg + 1)], num_classes)
-        self.fc = torch.nn.Linear(input_size // (4*4), 2)
+        self.fc = torch.nn.Linear(input_size // (4*4), 2 * num_classes)
     
     def _make_start(self, in_channel, input_dim=256):
         seq = torch.nn.Sequential(torch.nn.Conv2d(in_channel, 64, kernel_size=3, stride=2, padding=1),
@@ -90,6 +90,7 @@ class HourGlassNetwork(torch.nn.Module):
         return seq
     def _make_hg(self, num_hg, order=4, channels=[256, 256, 256, 256, 256], num_cls=1):
         module_list = []
+        j = 0
         for j in range(num_hg - 1):
             module_list.append(HourGlass(order=order))
             module_list.append(torch.nn.Conv2d(channels[j], channels[j], 1))
@@ -98,7 +99,7 @@ class HourGlassNetwork(torch.nn.Module):
             module_list.append(torch.nn.Conv2d(channels[j], channels[j+1], 1))
         
         module_list.append(HourGlass(order=order))
-        module_list.append(torch.nn.Conv2d(channels[j+1], num_cls, 1))
+        module_list.append(torch.nn.Conv2d(channels[j+1], 1, 1))
         return torch.nn.ModuleList(module_list)
     
     def forward(self, img):
@@ -113,7 +114,7 @@ class HourGlassNetwork(torch.nn.Module):
             result['heat_map_'+str(j)]=map
             x = out + branch + x 
         out = self.hg_net[-1](self.hg_net[-2](x))
-        out = out.flatten(-2, -1)
+        out = out.flatten(1)
         out = self.fc(out).sigmoid()
         result['result'] = out
         return result
